@@ -1,7 +1,6 @@
 package org.idpass.services;
 
 import android.app.Notification;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -22,7 +21,7 @@ public class WebServerService extends Service {
     private static final String TAG = "WebServerService";
     private int mNotificationID = -1;
 
-    SecuGenWebServer webServer;
+    WebServer webServer;
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////
@@ -35,7 +34,7 @@ public class WebServerService extends Service {
             //Log.d(TAG,"Enter mUsbReceiver.onReceive()");
             if (ACTION_USB_PERMISSION.equals(action)) {
                 synchronized (this) {
-                    UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
                         if(device != null){
                             debugMessage("USB BroadcastReceiver VID : " + device.getVendorId());
@@ -60,34 +59,9 @@ public class WebServerService extends Service {
     public WebServerService() {
     }
 
-    private void showForegroundNotification(String contentText) {
-        // Create intent that will bring our app to the front, as if it was tapped in the app
-        // launcher
-        Intent showTaskIntent = new Intent(getApplicationContext(), MainActivity.class);
-        showTaskIntent.setAction(Intent.ACTION_MAIN);
-        showTaskIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        showTaskIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        PendingIntent contentIntent = PendingIntent.getActivity(
-                getApplicationContext(),
-                0,
-                showTaskIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-
-        Notification notification = new Notification.Builder(getApplicationContext())
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText(contentText)
-                .setSmallIcon(R.drawable.ic_launcher_background)
-                .setWhen(System.currentTimeMillis())
-                .setContentIntent(contentIntent)
-                .build();
-        startForeground(1, notification);
-    }
-
     private void showNotification(String message) {
         cancelNotification();
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this)
-//                .setSmallIcon(R.drawable.notification_icon)
                 .setSmallIcon(R.drawable.ic_launcher_background)
                 .setContentTitle("ID PASS")
                 .setContentText(message)
@@ -125,13 +99,10 @@ public class WebServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        //Toast.makeText(this, "service starting", Toast.LENGTH_LONG).show();
-
         registerBroadcastReceiver();
 
         startServer();
 
-//        showForegroundNotification("Webservice Started");
         showNotification("Webservice Started");
 
         return START_STICKY;
@@ -141,7 +112,7 @@ public class WebServerService extends Service {
         try
         {
             UsbManager usbManager = (UsbManager)getSystemService(Context.USB_SERVICE);
-            webServer = new SecuGenWebServer(usbManager);
+            webServer = new WebServer(usbManager);
             webServer.start();
         }
         catch( IOException ioe )
