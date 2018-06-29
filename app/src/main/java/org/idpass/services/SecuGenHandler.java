@@ -136,8 +136,8 @@ public class SecuGenHandler extends RouterNanoHTTPD.DefaultHandler {
         long dwTimeStart = 0, dwTimeEnd = 0, dwTimeElapsed = 0;
         byte[] buffer = new byte[mImageWidth*mImageHeight];
         dwTimeStart = System.currentTimeMillis();
-//        long result = sgfplib.GetImageEx(buffer, 10000,50);
-        long result = sgfplib.GetImage(buffer);
+        long result = sgfplib.GetImageEx(buffer, 10000,70);
+//        long result = sgfplib.GetImage(buffer);
 
         if (result != SGFDxErrorCode.SGFDX_ERROR_NONE) {
             String message = "Error while getting image: " + String.valueOf(result);
@@ -152,8 +152,8 @@ public class SecuGenHandler extends RouterNanoHTTPD.DefaultHandler {
 
         byte[] pngImage = toPNG(buffer, mImageWidth, mImageHeight);
 
-//        jsonResponse.put("image",
-//                "data:image/png;base64," + Base64.encodeToString(pngImage, Base64.NO_WRAP));
+        jsonResponse.put("image",
+                "data:image/png;base64," + Base64.encodeToString(pngImage, Base64.NO_WRAP));
         jsonResponse.put("nfiq", nfiq);
         int quality = getQuality(sgfplib, buffer);
         jsonResponse.put("quality", quality);
@@ -217,7 +217,7 @@ public class SecuGenHandler extends RouterNanoHTTPD.DefaultHandler {
                         debugMessage("Serial Number: " + new String(deviceInfo.deviceSN()) + "\n");
 
                         mMaxTemplateSize = new int[1];
-                        sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_SG400);
+                        sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794);
                         sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
                         debugMessage("TEMPLATE_FORMAT_SG400 SIZE: " + mMaxTemplateSize[0] + "\n");
 
@@ -284,27 +284,32 @@ public class SecuGenHandler extends RouterNanoHTTPD.DefaultHandler {
 
 
     private byte[] getTemplate(JSGFPLib sgfplib, byte[] imageData, int fingerPosition, int imageQuality) throws SecugenException {
-        int[] maxTemplateSize = {0};
 
-        sgfplib.SetTemplateFormat(TEMPLATE_FORMAT_ISO19794);
-        sgfplib.GetMaxTemplateSize(maxTemplateSize);
+        sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794);
+
+        // maxTemplateSize is always set to 0 so we skip it and use a pre-defined value big enough
+        int[] maxTemplateSize = {1024};
+//        long error = sgfplib.GetMaxTemplateSize(maxTemplateSize);
+//        debugMessage("GetMaxTemplateSize() ret:" +  error + " SG400_MAX_SIZE=" +  maxTemplateSize[0] + "\n");
 
         SGFingerInfo fingerInfo = new SGFingerInfo();
         fingerInfo.FingerNumber = fingerPosition;
         fingerInfo.ImageQuality = imageQuality;
         fingerInfo.ImpressionType = SGImpressionType.SG_IMPTYPE_LP;
-        fingerInfo.ViewNumber = 1;
+        fingerInfo.ViewNumber = 0;
 
         byte[] template = new byte[maxTemplateSize[0]];
         long error = sgfplib.CreateTemplate(fingerInfo, imageData, template);
         if (error != (int)SGFDxErrorCode.SGFDX_ERROR_NONE) {
             throw new SecugenException(error, "Error while getting image template");
         }
-
+//        debugMessage("Template (" + maxTemplateSize[0] + ") : " + Arrays.toString(template));
         int[] templateSize = {0};
         sgfplib.GetTemplateSize(template, templateSize);
-
-        return Arrays.copyOf(template, templateSize[0]);
+//        debugMessage("TemplateSize: " + templateSize[0]);
+        template = Arrays.copyOf(template, templateSize[0]);
+//        debugMessage("Template after copy (" + templateSize[0] + ") : " + Arrays.toString(template));
+        return template;
     }
 
 
